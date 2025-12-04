@@ -1,90 +1,863 @@
-// api/goals.js
-export default async function handler(req, res) {
-  // Set CORS headers
-  res.setHeader('Access-Control-Allow-Credentials', true);
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GoalVault | 2026</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@200;300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-  // Handle OPTIONS request
-  if (req.method === 'OPTIONS') {
-    res.status(200).end();
-    return;
-  }
+        :root {
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --glass-highlight: rgba(255, 255, 255, 0.12);
+            --text-primary: rgba(255, 255, 255, 0.95);
+            --text-secondary: rgba(255, 255, 255, 0.5);
+            --text-muted: rgba(255, 255, 255, 0.25);
+            --accent: #00d4aa;
+            --accent-glow: rgba(0, 212, 170, 0.3);
+            --error: #ff6b6b;
+        }
 
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
+        body {
+            min-height: 100vh;
+            background: #0a0a0f;
+            font-family: 'Outfit', sans-serif;
+            color: var(--text-primary);
+            overflow-x: hidden;
+        }
 
-  try {
-    const { name, email, year, goals } = req.body;
+        .bg-container {
+            position: fixed;
+            inset: 0;
+            z-index: -1;
+            overflow: hidden;
+        }
 
-    // Validate input
-    if (!name || !email || !goals || !Array.isArray(goals) || goals.length === 0) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'Missing required fields' 
-      });
-    }
+        .bg-orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(100px);
+            opacity: 0.4;
+            animation: float 20s ease-in-out infinite;
+        }
 
-    // Here we'll send an email
-    // For now, we'll use a simple email service
-    const emailContent = `
-      Hello ${name}!
-      
-      Your ${year} goals have been saved in GoalVault:
-      
-      ${goals.map((goal, i) => `${i + 1}. ${goal}`).join('\n')}
-      
-      Keep this email as a reminder of your commitments!
-      
-      Best wishes,
-      GoalVault Team
-    `;
+        .bg-orb-1 {
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, #1a3a4a 0%, transparent 70%);
+            top: -200px;
+            left: -100px;
+            animation-delay: 0s;
+        }
 
-    // Send email using Resend API (you'll need to sign up)
-    const resendApiKey = process.env.RESEND_API_KEY;
-    
-    if (resendApiKey) {
-      const emailResponse = await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${resendApiKey}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          from: 'GoalVault <onboarding@resend.dev>',
-          to: email,
-          subject: `Your ${year} Goals - GoalVault`,
-          text: emailContent
-        })
-      });
+        .bg-orb-2 {
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, #2a1a4a 0%, transparent 70%);
+            bottom: -150px;
+            right: -100px;
+            animation-delay: -7s;
+        }
 
-      if (!emailResponse.ok) {
-        console.error('Email send failed:', await emailResponse.text());
-      }
-    }
+        .bg-orb-3 {
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, #0d4a3a 0%, transparent 70%);
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            animation-delay: -14s;
+        }
 
-    // Return success
-    return res.status(200).json({ 
-      success: true, 
-      message: 'Goals saved successfully',
-      goalsCount: goals.length
-    });
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            33% { transform: translate(30px, -30px) scale(1.05); }
+            66% { transform: translate(-20px, 20px) scale(0.95); }
+        }
 
-  } catch (error) {
-    console.error('Error:', error);
-    return res.status(500).json({ 
-      success: false, 
-      error: 'Server error' 
-    });
-  }
-}
-```
+        .noise {
+            position: fixed;
+            inset: 0;
+            z-index: -1;
+            opacity: 0.03;
+            pointer-events: none;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+        }
 
-Your folder structure should now look like:
-```
-goalvault/
-  ├── index.html
-  └── api/
-      └── goals.js
+        .container {
+            max-width: 680px;
+            margin: 0 auto;
+            padding: 60px 24px 100px;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 40px;
+            animation: fadeUp 0.8s ease-out;
+        }
+
+        .logo-icon {
+            width: 48px;
+            height: 48px;
+        }
+
+        .logo-text {
+            font-family: 'Space Mono', monospace;
+            font-size: 24px;
+            font-weight: 700;
+            letter-spacing: 4px;
+            background: linear-gradient(135deg, var(--accent) 0%, #00a88a 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 50px;
+            animation: fadeUp 0.8s ease-out;
+        }
+
+        .header-label {
+            font-family: 'Space Mono', monospace;
+            font-size: 11px;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            color: var(--accent);
+            margin-bottom: 16px;
+            opacity: 0.8;
+        }
+
+        .header-title {
+            font-size: clamp(2rem, 6vw, 2.8rem);
+            font-weight: 200;
+            letter-spacing: -1px;
+            line-height: 1.2;
+            margin-bottom: 12px;
+        }
+
+        .header-title span {
+            background: linear-gradient(135deg, var(--text-primary) 0%, var(--text-secondary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header-subtitle {
+            font-size: 15px;
+            color: var(--text-secondary);
+            font-weight: 300;
+        }
+
+        .glass-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(40px);
+            -webkit-backdrop-filter: blur(40px);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 40px;
+            position: relative;
+            overflow: hidden;
+            animation: fadeUp 0.8s ease-out 0.2s backwards;
+        }
+
+        .glass-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--glass-highlight), transparent);
+        }
+
+        .name-section {
+            margin-bottom: 40px;
+            padding-bottom: 32px;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .input-group {
+            position: relative;
+        }
+
+        .input-label {
+            font-family: 'Space Mono', monospace;
+            font-size: 10px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        .name-input {
+            width: 100%;
+            background: transparent;
+            border: none;
+            border-bottom: 1px solid var(--glass-border);
+            padding: 12px 0;
+            font-family: 'Outfit', sans-serif;
+            font-size: 24px;
+            font-weight: 300;
+            color: var(--text-primary);
+            transition: border-color 0.3s ease;
+        }
+
+        .name-input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .name-input::placeholder {
+            color: var(--text-muted);
+        }
+
+        .goals-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 24px;
+        }
+
+        .goals-title {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        .goals-counter {
+            font-family: 'Space Mono', monospace;
+            font-size: 12px;
+            color: var(--accent);
+        }
+
+        .goals-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .goal-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+            opacity: 0;
+            animation: fadeIn 0.4s ease-out forwards;
+        }
+
+        .goal-number {
+            font-family: 'Space Mono', monospace;
+            font-size: 11px;
+            color: var(--text-muted);
+            min-width: 20px;
+            padding-top: 14px;
+        }
+
+        .goal-input-wrapper {
+            flex: 1;
+            position: relative;
+        }
+
+        .goal-input {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 14px 16px;
+            font-family: 'Outfit', sans-serif;
+            font-size: 15px;
+            font-weight: 300;
+            color: var(--text-primary);
+            transition: all 0.3s ease;
+        }
+
+        .goal-input:focus {
+            outline: none;
+            border-color: var(--accent);
+            background: rgba(0, 212, 170, 0.03);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+
+        .goal-input::placeholder {
+            color: var(--text-muted);
+            font-style: italic;
+        }
+
+        .goal-input.filled {
+            border-color: rgba(0, 212, 170, 0.3);
+        }
+
+        .goal-hint {
+            position: absolute;
+            bottom: -22px;
+            left: 16px;
+            font-size: 11px;
+            color: var(--text-muted);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+
+        .goal-input:focus + .goal-hint {
+            opacity: 1;
+        }
+
+        .categories {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 32px;
+            padding-top: 24px;
+            border-top: 1px solid var(--glass-border);
+        }
+
+        .category-label {
+            font-family: 'Space Mono', monospace;
+            font-size: 10px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            width: 100%;
+            margin-bottom: 8px;
+        }
+
+        .category-chip {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 8px 14px;
+            font-size: 12px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .category-chip:hover {
+            background: rgba(0, 212, 170, 0.1);
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .submit-section {
+            margin-top: 40px;
+            animation: fadeUp 0.8s ease-out 0.4s backwards;
+        }
+
+        .submit-btn {
+            width: 100%;
+            background: linear-gradient(135deg, var(--accent) 0%, #00a88a 100%);
+            border: none;
+            border-radius: 16px;
+            padding: 18px 32px;
+            font-family: 'Outfit', sans-serif;
+            font-size: 16px;
+            font-weight: 500;
+            color: #0a0a0f;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 20px 40px var(--accent-glow);
+        }
+
+        .submit-btn:active {
+            transform: translateY(0);
+        }
+
+        .submit-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .submit-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .submit-btn:hover::before {
+            left: 100%;
+        }
+
+        .submit-helper {
+            text-align: center;
+            margin-top: 16px;
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        .email-section {
+            margin-top: 24px;
+        }
+
+        .email-input {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 14px 16px;
+            font-family: 'Outfit', sans-serif;
+            font-size: 15px;
+            font-weight: 300;
+            color: var(--text-primary);
+            transition: all 0.3s ease;
+        }
+
+        .email-input:focus {
+            outline: none;
+            border-color: var(--accent);
+            background: rgba(0, 212, 170, 0.03);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+
+        .email-input::placeholder {
+            color: var(--text-muted);
+        }
+
+        .status-message {
+            text-align: center;
+            padding: 12px;
+            border-radius: 12px;
+            margin-top: 16px;
+            font-size: 14px;
+            display: none;
+        }
+
+        .status-message.success {
+            display: block;
+            background: rgba(0, 212, 170, 0.1);
+            border: 1px solid rgba(0, 212, 170, 0.3);
+            color: var(--accent);
+        }
+
+        .status-message.error {
+            display: block;
+            background: rgba(255, 107, 107, 0.1);
+            border: 1px solid rgba(255, 107, 107, 0.3);
+            color: var(--error);
+        }
+
+        .status-message.loading {
+            display: block;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--glass-border);
+            color: var(--text-secondary);
+        }
+
+        .success-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(10, 10, 15, 0.95);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.5s ease;
+        }
+
+        .success-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .success-content {
+            text-align: center;
+            transform: scale(0.9);
+            opacity: 0;
+            transition: all 0.5s ease 0.2s;
+            max-width: 400px;
+            padding: 20px;
+        }
+
+        .success-overlay.active .success-content {
+            transform: scale(1);
+            opacity: 1;
+        }
+
+        .success-icon {
+            width: 80px;
+            height: 80px;
+            border: 2px solid var(--accent);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 24px;
+        }
+
+        .success-icon svg {
+            width: 40px;
+            height: 40px;
+            stroke: var(--accent);
+            stroke-width: 2;
+            fill: none;
+        }
+
+        .success-title {
+            font-size: 28px;
+            font-weight: 300;
+            margin-bottom: 12px;
+        }
+
+        .success-text {
+            color: var(--text-secondary);
+            font-size: 15px;
+            line-height: 1.6;
+        }
+
+        .success-close {
+            margin-top: 32px;
+            background: transparent;
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 14px 32px;
+            font-family: 'Outfit', sans-serif;
+            font-size: 14px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .success-close:hover {
+            border-color: var(--text-secondary);
+            color: var(--text-primary);
+        }
+
+        @keyframes fadeUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeIn {
+            to { opacity: 1; }
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid transparent;
+            border-top-color: currentColor;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 40px 16px 80px;
+            }
+
+            .glass-card {
+                padding: 28px 20px;
+                border-radius: 20px;
+            }
+
+            .name-input {
+                font-size: 20px;
+            }
+
+            .goal-number {
+                display: none;
+            }
+
+            .logo-icon {
+                width: 40px;
+                height: 40px;
+            }
+
+            .logo-text {
+                font-size: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-container">
+        <div class="bg-orb bg-orb-1"></div>
+        <div class="bg-orb bg-orb-2"></div>
+        <div class="bg-orb bg-orb-3"></div>
+    </div>
+    <div class="noise"></div>
+
+    <div class="container">
+        <div class="logo">
+            <svg class="logo-icon" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="24" cy="24" r="20" stroke="url(#logoGrad)" stroke-width="2" fill="none"/>
+                <circle cx="24" cy="24" r="14" stroke="url(#logoGrad)" stroke-width="1.5" fill="none" opacity="0.5"/>
+                <line x1="24" y1="10" x2="24" y2="18" stroke="url(#logoGrad)" stroke-width="2" stroke-linecap="round"/>
+                <line x1="24" y1="30" x2="24" y2="38" stroke="url(#logoGrad)" stroke-width="2" stroke-linecap="round"/>
+                <line x1="10" y1="24" x2="18" y2="24" stroke="url(#logoGrad)" stroke-width="2" stroke-linecap="round"/>
+                <line x1="30" y1="24" x2="38" y2="24" stroke="url(#logoGrad)" stroke-width="2" stroke-linecap="round"/>
+                <circle cx="24" cy="24" r="3" fill="url(#logoGrad)"/>
+                <path d="M20 20 L28 28 M28 20 L20 28" stroke="url(#logoGrad)" stroke-width="1.5" stroke-linecap="round" opacity="0.3"/>
+                <defs>
+                    <linearGradient id="logoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#00d4aa"/>
+                        <stop offset="100%" stop-color="#00a88a"/>
+                    </linearGradient>
+                </defs>
+            </svg>
+            <span class="logo-text">GOALVAULT</span>
+        </div>
+
+        <header class="header">
+            <div class="header-label">Secure Your Ambitions</div>
+            <h1 class="header-title"><span>Top 10 Goals for 2026</span></h1>
+            <p class="header-subtitle">Lock in your vision. Stay accountable.</p>
+        </header>
+
+        <main class="glass-card">
+            <div class="name-section">
+                <div class="input-group">
+                    <label class="input-label">Your Name</label>
+                    <input type="text" class="name-input" id="userName" placeholder="Enter your name" autocomplete="name">
+                </div>
+            </div>
+
+            <div class="goals-section">
+                <div class="goals-header">
+                    <span class="goals-title">Your Goals</span>
+                    <span class="goals-counter" id="goalsCounter">0/10</span>
+                </div>
+
+                <div class="goals-list" id="goalsList"></div>
+
+                <div class="categories">
+                    <span class="category-label">Quick inspiration</span>
+                    <span class="category-chip" data-hint="Save $X or increase income by X%">💰 Financial</span>
+                    <span class="category-chip" data-hint="Run a marathon or lose X pounds">🏃 Health</span>
+                    <span class="category-chip" data-hint="Get promoted or switch careers">💼 Career</span>
+                    <span class="category-chip" data-hint="Learn a new language or skill">📚 Learning</span>
+                    <span class="category-chip" data-hint="Visit 3 new countries">✈️ Travel</span>
+                    <span class="category-chip" data-hint="Spend more quality time with family">👨‍👩‍👧 Family</span>
+                    <span class="category-chip" data-hint="Meditate daily for 30 days">🧘 Mindfulness</span>
+                    <span class="category-chip" data-hint="Launch a side project">🚀 Projects</span>
+                </div>
+            </div>
+        </main>
+
+        <section class="submit-section">
+            <div class="email-section">
+                <label class="input-label">Email to receive your goals</label>
+                <input type="email" class="email-input" id="userEmail" placeholder="your@email.com" autocomplete="email">
+            </div>
+            <button class="submit-btn" id="submitBtn" disabled>
+                Vault My Goals & Send Email
+            </button>
+            <p class="submit-helper">Your goals will be saved & emailed for accountability</p>
+            <div class="status-message" id="statusMessage"></div>
+        </section>
+    </div>
+
+    <div class="success-overlay" id="successOverlay">
+        <div class="success-content">
+            <div class="success-icon">
+                <svg viewBox="0 0 24 24">
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+            </div>
+            <h2 class="success-title">Goals Vaulted!</h2>
+            <p class="success-text" id="successText">Your 2026 goals have been saved and an email has been sent to you for accountability.</p>
+            <button class="success-close" id="successClose">Done</button>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = window.location.origin;
+
+        const goalHints = [
+            "Be specific: What exactly do you want to achieve?",
+            "Make it measurable: How will you track progress?",
+            "Set a deadline: By when will you accomplish this?",
+            "Think big: What would make this year extraordinary?",
+            "Consider health: Physical or mental wellness goals?",
+            "Financial growth: Income, savings, or investment targets?",
+            "Relationships: How can you strengthen connections?",
+            "Career milestone: What's your next professional step?",
+            "Personal development: What skill will you master?",
+            "Give back: How will you contribute to others?"
+        ];
+
+        const goalsList = document.getElementById('goalsList');
+        const goalsCounter = document.getElementById('goalsCounter');
+        const submitBtn = document.getElementById('submitBtn');
+        const userNameInput = document.getElementById('userName');
+        const userEmailInput = document.getElementById('userEmail');
+        const successOverlay = document.getElementById('successOverlay');
+        const successClose = document.getElementById('successClose');
+        const statusMessage = document.getElementById('statusMessage');
+        const successText = document.getElementById('successText');
+
+        for (let i = 0; i < 10; i++) {
+            const goalItem = document.createElement('div');
+            goalItem.className = 'goal-item';
+            goalItem.style.animationDelay = `${i * 0.05}s`;
+
+            goalItem.innerHTML = `
+                <span class="goal-number">${String(i + 1).padStart(2, '0')}</span>
+                <div class="goal-input-wrapper">
+                    <input type="text" class="goal-input" data-index="${i}" placeholder="Goal ${i + 1}">
+                    <span class="goal-hint">${goalHints[i]}</span>
+                </div>
+            `;
+
+            goalsList.appendChild(goalItem);
+        }
+
+        const goalInputs = document.querySelectorAll('.goal-input');
+
+        function updateState() {
+            const filledGoals = Array.from(goalInputs).filter(input => input.value.trim()).length;
+            goalsCounter.textContent = `${filledGoals}/10`;
+
+            const hasName = userNameInput.value.trim();
+            const hasEmail = userEmailInput.value.trim() && userEmailInput.validity.valid;
+            const hasGoals = filledGoals > 0;
+
+            submitBtn.disabled = !(hasName && hasEmail && hasGoals);
+
+            goalInputs.forEach(input => {
+                input.classList.toggle('filled', input.value.trim());
+            });
+        }
+
+        function showStatus(message, type) {
+            statusMessage.textContent = message;
+            statusMessage.className = `status-message ${type}`;
+            if (type === 'loading') {
+                statusMessage.innerHTML = `<span class="spinner"></span>${message}`;
+            }
+        }
+
+        function hideStatus() {
+            statusMessage.className = 'status-message';
+        }
+
+        goalInputs.forEach(input => {
+            input.addEventListener('input', updateState);
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    const currentIndex = parseInt(input.dataset.index);
+                    if (currentIndex < 9) {
+                        goalInputs[currentIndex + 1].focus();
+                    } else {
+                        userEmailInput.focus();
+                    }
+                }
+            });
+        });
+
+        userNameInput.addEventListener('input', updateState);
+        userEmailInput.addEventListener('input', updateState);
+
+        document.querySelectorAll('.category-chip').forEach(chip => {
+            chip.addEventListener('click', () => {
+                const emptyInput = Array.from(goalInputs).find(input => !input.value.trim());
+                if (emptyInput) {
+                    emptyInput.focus();
+                    emptyInput.placeholder = chip.dataset.hint;
+                }
+            });
+        });
+
+        submitBtn.addEventListener('click', async () => {
+            const name = userNameInput.value.trim();
+            const email = userEmailInput.value.trim();
+            const year = 2026;
+
+            const goals = Array.from(goalInputs)
+                .map(input => input.value.trim())
+                .filter(Boolean);
+
+            if (!name || !email || goals.length === 0) {
+                showStatus('Please fill in your name, email, and at least one goal.', 'error');
+                return;
+            }
+
+            submitBtn.disabled = true;
+            showStatus('Saving your goals...', 'loading');
+
+            try {
+                const response = await fetch(`${API_URL}/api/goals`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        name,
+                        email,
+                        year,
+                        goals
+                    })
+                });
+
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    hideStatus();
+                    successText.textContent = `Your ${goals.length} goals for 2026 have been saved and an email has been sent to ${email} for accountability.`;
+                    successOverlay.classList.add('active');
+                } else {
+                    throw new Error(result.error || 'Failed to save goals');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showStatus(`Error: ${error.message}. Please try again.`, 'error');
+                submitBtn.disabled = false;
+            }
+        });
+
+        successClose.addEventListener('click', () => {
+            successOverlay.classList.remove('active');
+            userNameInput.value = '';
+            userEmailInput.value = '';
+            goalInputs.forEach(input => {
+                input.value = '';
+                input.classList.remove('filled');
+            });
+            updateState();
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && successOverlay.classList.contains('active')) {
+                successOverlay.classList.remove('active');
+            }
+        });
+    </script>
+</body>
+</html>
