@@ -1,4 +1,3 @@
-// api/goals.js
 export default async function handler(req, res) {
   // Set CORS headers
   res.setHeader('Access-Control-Allow-Credentials', true);
@@ -78,15 +77,3 @@ GoalVault Team
     });
   }
 }
-```
-
----
-
-### Part D: Check Your Work
-
-Open your `goalvault` folder. You should see:
-```
-goalvault/
-  ├── index.html (file)
-  └── api/ (folder)
-      └── goals.js (file inside api folder)
