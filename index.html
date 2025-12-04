@@ -1,0 +1,90 @@
+// api/goals.js
+export default async function handler(req, res) {
+  // Set CORS headers
+  res.setHeader('Access-Control-Allow-Credentials', true);
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  // Handle OPTIONS request
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
+
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  try {
+    const { name, email, year, goals } = req.body;
+
+    // Validate input
+    if (!name || !email || !goals || !Array.isArray(goals) || goals.length === 0) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Missing required fields' 
+      });
+    }
+
+    // Here we'll send an email
+    // For now, we'll use a simple email service
+    const emailContent = `
+      Hello ${name}!
+      
+      Your ${year} goals have been saved in GoalVault:
+      
+      ${goals.map((goal, i) => `${i + 1}. ${goal}`).join('\n')}
+      
+      Keep this email as a reminder of your commitments!
+      
+      Best wishes,
+      GoalVault Team
+    `;
+
+    // Send email using Resend API (you'll need to sign up)
+    const resendApiKey = process.env.RESEND_API_KEY;
+    
+    if (resendApiKey) {
+      const emailResponse = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${resendApiKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          from: 'GoalVault <onboarding@resend.dev>',
+          to: email,
+          subject: `Your ${year} Goals - GoalVault`,
+          text: emailContent
+        })
+      });
+
+      if (!emailResponse.ok) {
+        console.error('Email send failed:', await emailResponse.text());
+      }
+    }
+
+    // Return success
+    return res.status(200).json({ 
+      success: true, 
+      message: 'Goals saved successfully',
+      goalsCount: goals.length
+    });
+
+  } catch (error) {
+    console.error('Error:', error);
+    return res.status(500).json({ 
+      success: false, 
+      error: 'Server error' 
+    });
+  }
+}
+```
+
+Your folder structure should now look like:
+```
+goalvault/
+  ├── index.html
+  └── api/
+      └── goals.js
